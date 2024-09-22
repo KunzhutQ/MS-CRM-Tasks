@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Example</title>
+    <style>
+        body{
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+<div id="example"></div>
+<script>
+    {
+
+        function get(attr_name, as) {
+            let attr = parent.Xrm.Page.getAttribute(attr_name)
+            return as !== 'text' ? attr.getValue() : attr.getText()
+        }
+
+        let text;
+        let first = get('crafd_firstname');
+        let last = get('crafd_lastname');
+        let type = get('crafd_template_type', 'text');
+        let lang = get('crafd_language', 'text')
+        if(first && last && type && lang){
+            switch (lang) {
+                case 'English':
+                    text = `Example: Hello, ${first} ${last}. Happy ${type}!`
+                    break
+                case "German":
+                    text = `Beispiel: Hallo, ${first} ${last}. Glücklich ${type}!`
+                    break
+                default: text = "Language error"
+
+            }
+        }else {
+            text = "Form doesnt contain required info to create placeholder (all fields must be filled)"
+        }
+
+        document.getElementById('example').innerText = text
+    }
+</script>
+</body>
+</html>

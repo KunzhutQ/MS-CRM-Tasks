@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width"/>
+    <title>Batch Birthday</title>
+    <script src="../WebResources/crafd_locales"></script>
+    <script>
+        var locale = locales.getLocale("task3-5")
+    </script>
+    <style>
+        body{
+            font-weight: bold;
+            margin-top: 10%;
+            font-size: 2vmin;
+            color: white;
+
+        }
+        .container{
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+        .window{
+            position: relative;
+            background: rgba(126, 101, 101, 0.7);
+            border-radius: 2vmin;
+            margin: auto;
+            height: fit-content;
+            padding: 1vmin 1vmin 1vmin 1vmin;
+            width: fit-content;
+            max-width: 25vw;
+        }
+        button{
+            font-weight: bold;
+            height: 4vmin;
+            width: 8vmin;
+            margin-top: 2%;
+            margin-bottom: 2%;
+            font-size: 1.8vmin;
+        }
+        select{
+            border: none;
+            background: white;
+            border-radius: 0.5vmin;
+            font-size: 1.5vmin;
+            width: 100%;
+            margin: 2% 2% 2% 0;
+            padding: 1%;
+
+        }
+        progress{
+            width: 100%;
+        }
+        .cancel_window{
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            background: rgba(128, 128, 128, 0.8);
+            border-radius: 2vmin;
+            position: absolute;
+            padding: 2vmin;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            font-size: 2vmin;
+            visibility: hidden;
+        }
+        .cancel_window button{
+            height: 3vmin;
+            width: 7vmin;
+            color: white;
+            background: dodgerblue;
+            border-radius: 0.5vmin;
+            border: solid dodgerblue;
+        }
+
+        .cancel_window button:hover {
+            color: #adadad;
+            background: #2a75cb;
+            border: solid #2a75cb;
+        }
+
+        .start_btn{
+            color: white;
+            background: dodgerblue;
+            border-radius: 0.5vmin;
+            border: solid dodgerblue;
+
+        }
+        .start_btn:disabled{
+            color: #adadad;
+            background: #2a75cb;
+            border: solid #2a75cb;
+        }
+        .start_btn:hover{
+            color: #adadad;
+            background: #2a75cb;
+            border: solid #2a75cb;
+        }
+        .cancel_btn:hover{
+            color: #adadad;
+            background: #a92635;
+            border: solid #a92635;
+        }
+        .cancel_btn{
+            color: white;
+            background: #dc3545;
+            border-radius: 0.5vmin;
+            border: solid #dc3545;
+        }
+        .cancel_btn:disabled{
+            color: #adadad;
+            background: #a92635;
+            border: solid #a92635;
+        }
+    </style>
+    <script>
+        const currentDate = new Date();
+
+        const Email = {
+            send: function (a) {
+                return new Promise(function (n, e) {
+                    a.nocache = Math.floor(1e6 * Math.random() + 1), a.Action = "Send";
+                    var t = JSON.stringify(a);
+                    Email.ajaxPost("https://smtpjs.com/v3/smtpjs.aspx?", t, function (e) {
+                        n(e)
+                    })
+                })
+            }, ajaxPost: function (e, n, t) {
+                var a = Email.createCORSRequest("POST", e);
+                a.setRequestHeader("Content-type", "application/x-www-form-urlencoded"), a.onload = function () {
+                    var e = a.responseText;
+                    null != t && t(e)
+                }, a.send(n)
+            }, ajax: function (e, n) {
+                var t = Email.createCORSRequest("GET", e);
+                t.onload = function () {
+                    var e = t.responseText;
+                    null != n && n(e)
+                }, t.send()
+            }, createCORSRequest: function (e, n) {
+                var t = new XMLHttpRequest;
+                return "withCredentials" in t ? t.open(e, n, !0) : "undefined" != typeof XDomainRequest ? (t = new XDomainRequest).open(e, n) : t = null, t
+            }
+        };
+
+        function cancelDialogState(bool){
+            document.getElementById('cancel_window').style.visibility=bool ? 'visible' : 'hidden'
+
+        }
+        function createDateOption(date) {
+           return `<option value="${date.getTime()}" id="${date.getTime()}">${date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear()}</option>`
+        }
+
+
+        function getDates() {
+            const dates = []
+            const next7daysElement = document.getElementById('next7days')
+            const choice = document.getElementById('select_template').value==='Birthday' ? next7daysElement.value : document.getElementById('currentDay').value;
+            next7daysElement.childNodes.forEach((item)=>{
+                if(item.value<=choice){
+                    dates.push(new Date(Number(item.value)))
+                }
+            })
+            return dates
+
+        }
+          let executionCancelled = false;
+
+          function sendMails(records,proceed,actionOnResolved, actionOnReject) {
+
+            return new Promise((resolve, reject)=>{
+                let a = -1;
+                function createBody() {
+                    function getGreetings() {
+                        switch (records[a].gendercode) {
+                            case 1:
+                                return 'Sehr geehrter Herr'
+                            case 2:
+                                return 'Sehr geehrte Frau'
+                            default:
+                                return 'Sehr geehrter'
+                        }
+                    }
+                    return `${getGreetings()} ${records[a].firstname} ${records[a].lastname}. Alles Gute zum Geburtstag!`
+                }
+                function f() {
+                    a++
+                    if(executionCancelled){
+                       return reject(locale.processing_cancelled)
+                    }
+                    if (a < records.length) {
+                        Email.send({
+                            Host: "smtp.elasticemail.com",
+                            Username: "testmilo78@outlook.com",
+                            Password: "24A11EADE29F8F3AAC89FC36CF5172903162",
+                            To: 'testmilo78@outlook.com',
+                            From: "testmilo78@outlook.com",
+                            Subject: 'Unser lieber Kunde',
+                            Body: createBody()
+                        }).then(success => actionOnResolved(records[a]), failed => actionOnReject()).finally(f)
+
+                        proceed()
+
+                    } else if(a === records.length){
+                        return resolve(locale.processing_done)
+                    }
+
+                }
+                f()
+            })
+
+        }
+
+        function set_completion_status_message(m) {
+            document.getElementById('completion_status_message').innerText = m
+        }
+        function setDefaults(arr){
+            arr.forEach((value)=> value.set(0))
+            set_completion_status_message('')
+        }
+
+        function startExecution(){
+            const startButton = document.getElementById('start_button')
+            const select_template = document.getElementById('select_template')
+            select_template.disabled = true
+            startButton.disabled=true
+            const cancelButton = document.getElementById('cancel_button')
+            cancelButton.disabled=false
+            const proceeded = {element:document.getElementById('proceeded'), incr: function () {this.element.innerText=++this.value}, value: 0, set: function (value) {this.value=value;this.element.innerText = this.value}}
+            const successfully_sent = {element: document.getElementById('successfully_sent'), incr: function () {this.element.innerText = ++this.value}, value: 0, set: function (value) {this.value = value;this.element.innerText = this.value}}
+            const fails = {element: document.getElementById('fails'), incr: function () {this.element.innerText = ++this.value}, value: 0, set: function (value) {this.value = value;this.element.innerText = this.value}}
+            const total = {element:document.getElementById('total'), set: function (value) {this.value=value;this.element.innerText =this.value}, value: 0}
+            const progressBar = {element: document.getElementById('progressBar'), set: function (percent) {this.element.value = percent}}
+            executionCancelled = false
+            setDefaults([proceeded,successfully_sent,fails,total,progressBar])
+            function handleRecords(records){
+                let selectedDates = getDates();
+
+                let valid_records = records.filter((record) => {
+                    let record_date = new Date(record.birthdate);
+
+                    for (let a = 0; a < selectedDates.length; a++) {
+                        if (record_date.getMonth() === selectedDates[a].getMonth() && record_date.getDate() === selectedDates[a].getDate() && record.crafd_dateofthelastbirthdaycongratulations == null) {
+                            return true
+                        }
+                    }
+                    return false
+                });
+                total.set(valid_records.length)
+
+                sendMails(valid_records,
+                    function () {
+                        proceeded.incr()
+                        progressBar.set(proceeded.value / total.value * 100)
+                    },
+                    function (record) {
+                        successfully_sent.incr()
+                        parent.Xrm.WebApi.updateRecord('contact', record.contactid, {crafd_dateofthelastbirthdaycongratulations: currentDate.toISOString().split('T')[0]}).then((result) => {
+                            console.log(result)
+                        }, (reject) => console.log(reject))
+                    },
+                    function () {
+                        fails.incr()
+                    }).then((res) => set_completion_status_message(res), (rej) => set_completion_status_message(rej)).finally(() => {
+                    startButton.disabled = false
+                    cancelButton.disabled = true
+                    select_template.disabled=false
+                })
+            }
+            function f(){
+                let records = []
+                function getRecords(entity, request) {
+                    parent.Xrm.WebApi.retrieveMultipleRecords(entity, request).then((result) => {
+                        records = records.concat(result.entities)
+                        if (result.nextLink !== undefined) {
+                            getRecords('contact', result.nextLink.substring(result.nextLink.indexOf('?$'), result.nextLink.length))
+                        }else{
+                            handleRecords(records)
+                        }
+                    }, (message) => alert(message))
+                }
+                getRecords('contact', '?$select=firstname,lastname,birthdate,crafd_dateofthelastbirthdaycongratulations,gendercode&$filter=birthdate ge 1990-01-01')
+
+            }
+            f()
+
+        }
+
+    </script>
+</head>
+<body>
+
+     <div class="window">
+      <div id="batch_mail" style="font-size: 3vmin; font-weight: bold; margin-bottom: 1.5vmin"></div>
+      <script>
+          {
+              document.getElementById('batch_mail').innerText=locale.batch_email
+          }
+      </script>
+         <span id="select_template_text"></span>
+
+         <select id="select_template"></select>
+
+
+        <div id="dates_select_div">
+
+             <div id="select_start_date"></div>
+             <select id="currentDay"></select>
+             <div id="select_end_date"></div>
+             <select id="next7days"></select>
+
+            <script>
+                {
+                    document.getElementById('currentDay').innerHTML = createDateOption(currentDate)
+                    document.getElementById('next7days').innerHTML = function () {
+                        let buf = '';
+                        for (let a = 0; a < 7; a++) {
+                            buf = buf + createDateOption(new Date(currentDate.getTime() + (86400000 * a)))
+                        }
+                        return buf
+                    }()
+                }
+            </script>
+        </div>
+
+         <script>
+             {
+                 document.getElementById('select_start_date').innerText = locale.start_date
+                 document.getElementById('select_end_date').innerText = locale.end_date
+
+                 document.getElementById('select_template_text').innerText = locale.select_template
+                 function f() {
+                     let buf = ``;
+                     parent.Xrm.Utility.getEntityMetadata('crafd_emailtemplates', ["crafd_template_type"]).then((result) => {
+                         Object.entries(result.Attributes._collection.crafd_template_type.OptionSet).forEach((array) => {
+                             buf = buf + `<option id="${array[1].value}" value="${array[1].text}">${array[1].text}</option>`
+                         })
+                         let s_t = document.getElementById('select_template')
+                         let d_s_d = document.getElementById('dates_select_div')
+                         s_t.innerHTML = buf
+                         function test(){
+                             d_s_d.style.display = s_t.value !== 'Birthday' ? 'none' : "block"
+                             console.log('test summoned.')
+                         }
+                         test()
+                         s_t.addEventListener('change', test)
+
+                     }, (reason)=>{alert(reason)})
+
+                 }
+                 f()
+
+             }
+         </script>
+
+
+
+
+         <div class="cancel_window" id="cancel_window">
+             <script>
+                 document.getElementById('cancel_window').append(`${locale.are_use_sure_cancel}`)
+             </script>
+
+             <div id="button_cont" class="container" style="justify-content: center">
+                 <button onclick="function f(){
+                     executionCancelled=true
+                     cancelDialogState(false)
+                 }f()" style="margin-right: 5%"></button>
+                 <button onclick="cancelDialogState(false)"></button>
+
+                 <script>
+                     {
+                         let btn1_cont = document.getElementById("button_cont")
+                         btn1_cont.children[0].textContent = locale.yes
+                         btn1_cont.children[1].textContent = locale.no
+                     }
+                 </script>
+             </div>
+         </div>
+
+         <div id="button_cont2" class="container">
+           <button class="cancel_btn" id="cancel_button" disabled onclick="cancelDialogState(true)"></button>
+
+           <button class="start_btn" id="start_button" onclick="startExecution()"></button>
+             <script>
+                 {
+                     let btn2_cont = document.getElementById('button_cont2')
+                     btn2_cont.children[0].textContent = locale.Cancel
+                     btn2_cont.children[1].textContent = locale.Start
+                 }
+             </script>
+         </div>
+
+         <progress id="progressBar" value="0" max="100"></progress>
+         <div style="margin-top: 4%" id="statusField"></div>
+         <script>
+              document.getElementById('statusField')
+                .innerHTML=locale.processed_contacts.replace('$pr', `<span id="proceeded">0</span>`).replace('$tot', `<span id="total">0</span>`)
+
+         </script>
+         <div id="succ_sent_div" style="text-align: left; line-break: anywhere"></div>
+         <div id="fails_div" style="text-align: left"></div>
+         <script>
+             document.getElementById('succ_sent_div').innerHTML= `${locale.successfully_sent} <span id="successfully_sent">0</span>`
+             document.getElementById('fails_div').innerHTML= `${locale.fails} <span id="fails">0</span>`
+         </script>
+     </div>
+        <div style="color: forestgreen; text-align: center" id="completion_status_message"></div>
+</body>
+</html>

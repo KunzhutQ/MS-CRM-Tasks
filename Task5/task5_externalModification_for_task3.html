@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width"/>
+    <title>Batch Birthday</title>
+    <script>
+        {
+            let item = localStorage.getItem("locale_id");
+            let url_data = new URLSearchParams(window.location.search).get('Data')
+            if (url_data != null) {
+                if(item !== url_data){
+                    localStorage.setItem("locale_id", url_data)
+                }
+                window.open("https://orgc0fc7715.crm11.dynamics.com/WebResources/crafd_task5_externalModification_for_task3", "_self")
+            }
+        }
+    </script>
+    <script src="https://secure.aadcdn.microsoftonline-p.com/lib/1.0.0/js/adal.min.js"></script>
+
+    <script>
+        var authContext;
+        var user;
+        var organizationURI = "https://orgc0fc7715.crm11.dynamics.com"
+        var apiVersion = "/api/data/v8.0/";
+
+        window.config = {
+            tenant: "qsolutions494.onmicrosoft.com",
+            clientId: "51e07cb8-b209-473a-bed8-b2801e2bcab2",
+            postLogoutRedirectUri: "https://orgc0fc7715.crm11.dynamics.com/WebResources/crafd_task5_externalModification_for_task3",
+            endpoints: { orgUri: organizationURI },
+            cacheLocation: 'localStorage', // enable this for IE, as sessionStorage does not work for localhost.
+        };
+
+        function authenticate() {
+            authContext = new AuthenticationContext(config);
+            // Check For & Handle Redirect From AAD After Login
+            let isCallback = authContext.isCallback(window.location.hash);
+            if (isCallback) {
+                authContext.handleWindowCallback();
+            }
+            let  loginError = authContext.getLoginError();
+            if (isCallback && !loginError) {
+                window.location = authContext._getItem(authContext.CONSTANTS.STORAGE.LOGIN_REQUEST);
+            } else {
+                console.log(loginError);
+            }
+            user = authContext.getCachedUser();
+        }
+        authenticate()
+        if(!user){
+            authContext.login()
+        }else{
+
+        }
+
+
+    </script>
+    <style>
+        body{
+            margin-top: 10%;
+            font-size: 2vmin;
+            color: white;
+        }
+        .container{
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
+        .window{
+            position: relative;
+            background: #2f6bbb;
+            border-radius: 2vmin;
+            margin: auto;
+            width: fit-content;
+            height: fit-content;
+            padding: 2vmin;
+            min-width: 20vw;
+        }
+        button{
+            margin: 5% 5% 0 5%;
+            font-size: 2vmin;
+        }
+        select{
+            font-size: 1.5vmin;
+            margin: 2%;
+        }
+        progress{
+            width: 100%;
+        }
+        .cancel_window{
+            display: flex;
+            flex-direction: column;
+            text-align: center;
+            align-items: center;
+            justify-content: center;
+            z-index: 99;
+            background: rgba(128, 128, 128, 0.8);
+            border-radius: 2vmin;
+            position: absolute;
+            padding: 2vmin;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            font-size: 2vmin;
+            visibility: hidden;
+        }
+        .logout_span{
+            color: #2f6bbb;
+            text-decoration: underline;
+        }
+        .logout_span:hover{
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        var locale;
+        const currentDate = new Date();
+
+        const Email = {
+            send: function (a) {
+                return new Promise(function (n, e) {
+                    a.nocache = Math.floor(1e6 * Math.random() + 1), a.Action = "Send";
+                    var t = JSON.stringify(a);
+                    Email.ajaxPost("https://smtpjs.com/v3/smtpjs.aspx?", t, function (e) {
+                        n(e)
+                    })
+                })
+            }, ajaxPost: function (e, n, t) {
+                var a = Email.createCORSRequest("POST", e);
+                a.setRequestHeader("Content-type", "application/x-www-form-urlencoded"), a.onload = function () {
+                    var e = a.responseText;
+                    null != t && t(e)
+                }, a.send(n)
+            }, ajax: function (e, n) {
+                var t = Email.createCORSRequest("GET", e);
+                t.onload = function () {
+                    var e = t.responseText;
+                    null != n && n(e)
+                }, t.send()
+            }, createCORSRequest: function (e, n) {
+                var t = new XMLHttpRequest;
+                return "withCredentials" in t ? t.open(e, n, !0) : "undefined" != typeof XDomainRequest ? (t = new XDomainRequest).open(e, n) : t = null, t
+            }
+        };
+
+        function createHeader(token){
+            return {
+                "Authorization": "Bearer " +token,
+                "Accept": "application/json",
+                "Content-Type": "application/json; charset=utf-8",
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0"
+            }
+        }
+
+
+        function tokenFetchOperation(fetchParameter1, fetchParameter2) {
+            return new Promise((resolve, reject)=>{
+
+                authContext.acquireToken(organizationURI, function (error, token) {
+                    if (error || !token) {
+                        let errM = 'ADAL error occurred: ' + error
+                        console.log(errM);
+                        return reject(errM);
+                    }
+                    fetchParameter2.headers = createHeader(token)
+
+                    fetch(fetchParameter1, fetchParameter2)
+                        .then(resolve, reject)
+                })
+            })
+
+        }
+
+        function retrieveMultipleRecords(table,request) {
+            return new Promise((resolve, reject)=>{
+                tokenFetchOperation(organizationURI + apiVersion + table + request, {method: "GET"}).then((res)=>{res.json().then((json)=>{
+                      resolve(json)
+                    }, reject
+                )},reject)
+            })
+
+        }
+        function updateRecord(table, record_id, params_object) {
+            return new Promise((resolve, reject) => {
+                tokenFetchOperation(organizationURI + apiVersion + table + `(${record_id})`, {method: "PATCH", body: params_object}).then(resolve,reject)
+
+            })
+
+        }
+        function cancelDialogState(bool){
+            document.getElementById('cancel_window').style.visibility=bool ? 'visible' : 'hidden'
+
+        }
+        function createDateOption(date) {
+           return `<option value="${date.getTime()}" id="${date.getTime()}">${date.getDate() + "/" + (date.getMonth() + 1) + "/" + date.getFullYear()}</option>`
+        }
+
+
+        function getDates() {
+            const dates = []
+            const next7daysElement = document.getElementById('next7days')
+            const choice = next7daysElement.value
+            next7daysElement.childNodes.forEach((item)=>{
+                if(item.value<=choice){
+                    dates.push(new Date(Number(item.value)))
+                }
+            })
+            return dates
+
+        }
+          let executionCancelled = false;
+
+          function sendMails(records,proceed,actionOnResolved, actionOnReject) {
+
+            return new Promise((resolve, reject)=>{
+                let a = -1;
+                function createBody() {
+                    function getGreetings() {
+                        switch (records[a].gendercode) {
+                            case 1:
+                                return 'Sehr geehrter Herr'
+                            case 2:
+                                return 'Sehr geehrte Frau'
+                            default:
+                                return 'Sehr geehrter'
+                        }
+                    }
+                    return `${getGreetings()} ${records[a].firstname} ${records[a].lastname}. Alles Gute zum Geburtstag!`
+                }
+                function f() {
+                    a++
+                    if(executionCancelled){
+                       return reject(locale.processing_cancelled)
+                    }
+                    if (a < records.length) {
+                        Email.send({
+                            Host: "smtp.elasticemail.com",
+                            Username: "testmilo78@outlook.com",
+                            Password: "24A11EADE29F8F3AAC89FC36CF5172903162",
+                            To: 'testmilo78@outlook.com',
+                            From: "testmilo78@outlook.com",
+                            Subject: 'Unser lieber Kunde',
+                            Body: createBody()
+                        }).then(success => actionOnResolved(records[a]), failed => actionOnReject()).finally(f)
+
+                        proceed()
+
+                    } else if(a === records.length){
+                        return resolve(locale.processing_done)
+                    }
+
+                }
+                f()
+            })
+
+        }
+
+        function set_completion_status_message(m) {
+            document.getElementById('completion_status_message').innerText = m
+        }
+        function setDefaults(arr){
+            arr.forEach((value)=> value.set(0))
+            set_completion_status_message('')
+        }
+
+        function startExecution(){
+            const startButton = document.getElementById('start_button')
+            startButton.disabled=true
+            const cancelButton = document.getElementById('cancel_button')
+            cancelButton.disabled=false
+            const proceeded = {element:document.getElementById('proceeded'), incr: function () {this.element.innerText=++this.value}, value: 0, set: function (value) {this.value=value;this.element.innerText = this.value}}
+            const successfully_sent = {element: document.getElementById('successfully_sent'), incr: function () {this.element.innerText = ++this.value}, value: 0, set: function (value) {this.value = value;this.element.innerText = this.value}}
+            const fails = {element: document.getElementById('fails'), incr: function () {this.element.innerText = ++this.value}, value: 0, set: function (value) {this.value = value;this.element.innerText = this.value}}
+            const total = {element:document.getElementById('total'), set: function (value) {this.value=value;this.element.innerText =this.value}, value: 0}
+            const progressBar = {element: document.getElementById('progressBar'), set: function (percent) {this.element.value = percent}}
+            executionCancelled = false
+            setDefaults([proceeded,successfully_sent,fails,total,progressBar])
+            function handleRecords(records){
+                let selectedDates = getDates();
+
+                let valid_records = records.filter((record) => {
+                    let record_date = new Date(record.birthdate);
+
+                    for (let a = 0; a < selectedDates.length; a++) {
+                        if (record_date.getMonth() === selectedDates[a].getMonth() && record_date.getDate() === selectedDates[a].getDate() && record.crafd_dateofthelastbirthdaycongratulations == null) {
+                            return true
+                        }
+                    }
+                    return false
+                });
+                total.set(valid_records.length)
+
+                sendMails(valid_records,
+                    function () {
+                        proceeded.incr()
+                        progressBar.set(proceeded.value / total.value * 100)
+                    },
+                    function (record) {
+                        successfully_sent.incr()
+                        updateRecord('contacts', record.contactid, JSON.stringify({crafd_dateofthelastbirthdaycongratulations: currentDate.toISOString().split('T')[0]}))
+                       .then((result) => {
+                            console.log(result)
+                        }, (reject) => console.log(reject))
+                    },
+                    function () {
+                        fails.incr()
+                    }).then((res) => set_completion_status_message(res), (rej) => set_completion_status_message(rej)).finally(() => {
+                    startButton.disabled = false
+                    cancelButton.disabled = true
+                })
+            }
+            function f(){
+                let records = []
+                function getRecords(table, request) {
+                    retrieveMultipleRecords(table, request).then((result) => {
+                        records = records.concat(result.value)
+                        if (result['@odata.nextLink'] !== undefined) {
+                            getRecords(table, result['@odata.nextLink'].substring(result.nextLink.indexOf('?$'), result.nextLink.length))
+                        }else{
+                            handleRecords(records)
+                        }
+                    }, (message) => alert(message))
+                }
+                getRecords('contacts', '?$select=firstname,lastname,birthdate,crafd_dateofthelastbirthdaycongratulations,gendercode&$filter=birthdate ge 1990-01-01')
+
+            }
+            f()
+
+        }
+    </script>
+
+    <script src="https://orgc0fc7715.crm11.dynamics.com/WebResources/crafd_locales"></script>
+    <script>
+        localesInit();
+        locale = locales.getLocaleByLanguageId(localStorage.getItem('locale_id'), 'task3-5')
+    </script>
+</head>
+<body>
+    <script>
+        if (user) {
+            let el = document.createElement('div')
+            el.setAttribute('style', 'color: forestgreen; text-align: center; margin-bottom: 1vmin')
+            el.setAttribute('id', 'logged_state')
+            document.body.appendChild(el)
+            document.getElementById('logged_state').innerHTML = `${locale.you_logged_as} ${user.profile.name}. <span onclick="authContext.logOut()" class="logout_span">${locale.logout}</div>`
+        }
+    </script>
+
+    <div class="window">
+
+        <div id="select_date" style="font-size: 2.5vmin;text-align: center"></div>
+        <script>
+            document.getElementById('select_date').innerText = locale.select_date
+        </script>
+
+        <div style="flex-direction: row; display: flex; justify-content: center">
+            <select id="currentDay"></select>
+            -
+            <select id="next7days"></select>
+            <script>
+                {
+                    document.getElementById('currentDay').innerHTML = createDateOption(currentDate)
+                    document.getElementById('next7days').innerHTML = function () {
+                        let buf = '';
+                        for (let a = 0; a < 7; a++) {
+                            buf = buf + createDateOption(new Date(currentDate.getTime() + (86400000 * a)))
+                        }
+                        return buf
+                    }()
+                }
+            </script>
+        </div>
+
+        <div class="cancel_window" id="cancel_window">
+            <script>
+                document.getElementById('cancel_window').append(`${locale.are_use_sure_cancel}`)
+            </script>
+            <div id="button_cont" class="container">
+                <button onclick="function f(){
+                     executionCancelled=true
+                     cancelDialogState(false)
+                 }f()"></button>
+                <button onclick="cancelDialogState(false)"></button>
+                <script>
+                    {
+                        let butt_cont = document.getElementById("button_cont")
+                        butt_cont.children[0].innerText = locale.yes
+                        butt_cont.children[1].innerText = locale.no
+                    }
+                </script>
+            </div>
+        </div>
+
+        <div id="button_cont2" class="container">
+            <button id="cancel_button" disabled onclick="cancelDialogState(true)"></button>
+
+            <button id="start_button" onclick="startExecution()"></button>
+            <script>
+                {
+                    let button_cont2 = document.getElementById('button_cont2')
+                    button_cont2.children[0].innerText = locale.Cancel
+                    button_cont2.children[1].innerText = locale.Start
+                }
+            </script>
+        </div>
+
+        <progress id="progressBar" value="0" max="100"></progress>
+        <div style="text-align: center" id="statusField"></div>
+        <script>
+            document.getElementById('statusField')
+                .innerHTML = locale.processed_contacts.replace('$pr', `<span id="proceeded">0</span>`).replace('$tot', `<span id="total">0</span>`)
+
+        </script>
+        <div id="succ_sent_div" style="text-align: left"></div>
+        <div id="fails_div" style="text-align: left"></div>
+        <script>
+            document.getElementById('succ_sent_div').innerHTML = `${locale.successfully_sent} <span id="successfully_sent">0</span>`
+            document.getElementById('fails_div').innerHTML = `${locale.fails} <span id="fails">0</span>`
+        </script>
+    </div>
+    <div style="color: forestgreen; text-align: center" id="completion_status_message"></div>
+
+  <!-- <script> //load page only after locale load.
+  tokenFetchOperation(organizationURI + '/WebResources/crafd_locales', {method: "GET"}).then((result) => {
+    result.text().then((jsToSet) => {
+        window.eval(jsToSet);
+        localesInit();
+        locale=locales.getLocaleByLanguageId(new URLSearchParams(window.location.search).get('Data'),'task3-5')
+        let root = document.createElement('div')
+
+        document.body.appendChild(root)
+    })
+   }, reject=>alert(reject))
+  </script> -->
+</body>
+</html>
